@@ -307,13 +307,38 @@ See `mantra-eval-key-vector' for more on COMPUTATION and RESULT."
       result
     (let ((current-phase (mantra--seq-first seq))
           (remaining-seq (mantra--seq-rest seq)))
-      (let ((executed-phase (mantra-eval current-phase
-                                         computation
-                                         result)))
-        (when executed-phase
-          (mantra-eval-seq remaining-seq
-                           computation
-                           executed-phase))))))
+      (if (vectorp current-phase)
+          ;; merge primitive key vectors prior to evaluation.
+          ;; this addresses a problem with count arguments
+          ;; in evil mode (and also symex mode), where repeating
+          ;; the keys independently doesn't incorporate the count.
+          ;; This happens even when using `execute-kbd-macro', so
+          ;; it may well be a bug in Emacs. But to steer clear of it,
+          ;; we simply merge contiguous key vectors.
+          (if (or (mantra--seq-null-p remaining-seq)
+                  (not (vectorp (mantra--seq-first remaining-seq))))
+              (let ((executed-phase (mantra-eval current-phase
+                                                 computation
+                                                 result)))
+                (when executed-phase
+                  (mantra-eval-seq remaining-seq
+                                   computation
+                                   executed-phase)))
+            (let ((merged-keyseqs (vconcat current-phase
+                                           (mantra--seq-first remaining-seq))))
+              (mantra-eval-seq
+               (mantra-seq-compose
+                (mantra-make-seq merged-keyseqs)
+                (mantra--seq-rest remaining-seq))
+               computation
+               result)))
+        (let ((executed-phase (mantra-eval current-phase
+                                           computation
+                                           result)))
+          (when executed-phase
+            (mantra-eval-seq remaining-seq
+                             computation
+                             executed-phase)))))))
 
 (defun mantra-eval-repetition (repetition computation result)
   "Execute a REPETITION.

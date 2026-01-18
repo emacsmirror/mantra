@@ -216,6 +216,19 @@
      (equal "aaabcdef"
             result)))
 
+  ;; merges key vectors prior to evaluation
+  ;; This test passes whether the vectors are merged
+  ;; or not (but merging addresses an issue with count
+  ;; arguments in evil, for example), but it this test
+  ;; at least exercises that code
+  (let ((result))
+    (with-fixture fixture-empty-buffer
+                  (mantra-eval '(seq ([50]
+                                      [120]))))
+    (should
+     (equal "2x"
+            result)))
+
   ;; using a nondefault computation doesn't change the behavior
   (let ((result))
     (with-fixture fixture-empty-buffer
